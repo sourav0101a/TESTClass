@@ -33,3 +33,78 @@ global class AEMUpdateLastLogin {
     }
 
 }
+
+
+
+@isTest
+public class AEMUpdateLastLoginTest {
+
+    @testSetup
+    static void setupTestData() {
+        // Create a User
+        User testUser = new User(
+            FirstName = 'Test',
+            LastName = 'User',
+            Username = 'testuser@testorg.com',
+            Email = 'testuser@testorg.com',
+            Alias = 'tuser',
+            TimeZoneSidKey = 'America/Los_Angeles',
+            LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8',
+            ProfileId = [SELECT Id FROM Profile WHERE Name = 'Standard User'][0].Id,
+            LanguageLocaleKey = 'en_US'
+        );
+        insert testUser;
+        
+        // Create a MYTR_UserPreferences__c record
+        MYTR_UserPreferences__c userPreferences = new MYTR_UserPreferences__c(
+            UserPreferencesId__c = testUser.Id,
+            Active__c = true,
+            First_Time_Login_Date__c = Date.today(),
+            First_Time_Login__c = true,
+            Last_Login_Time__c = Date.today().addDays(-10),
+            productandservices__c = 'Test Product',
+            roleresponsibility__c = 'Test Role'
+        );
+        insert userPreferences;
+    }
+    
+    @isTest
+    static void testSetMyLastLoginDate_Success() {
+        // Retrieve test user
+        User testUser = [SELECT Id FROM User WHERE Username = 'testuser@testorg.com' LIMIT 1];
+        
+        // Set mock request URL
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/user/AEMUpdateLastLogin/' + testUser.Id;
+        RestContext.request = req;
+        
+        // Call the method
+        Test.startTest();
+        Map<String, String> result = AEMUpdateLastLogin.SetMyLastLoginDate();
+        Test.stopTest();
+        
+        // Validate result
+        System.assertEquals('Success', result.get(Label.AEM_Result));
+        
+        // Validate that the Last_Login_Time__c was updated
+        MYTR_UserPreferences__c userPref = [SELECT Last_Login_Time__c FROM MYTR_UserPreferences__c WHERE UserPreferencesId__c = :testUser.Id];
+        System.assertEquals(Date.today(), userPref.Last_Login_Time__c);
+    }
+
+    @isTest
+    static void testSetMyLastLoginDate_Failure() {
+        // Set mock request URL with an invalid user ID
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/user/AEMUpdateLastLogin/invalidUserId';
+        RestContext.request = req;
+        
+        // Call the method
+        Test.startTest();
+        Map<String, String> result = AEMUpdateLastLogin.SetMyLastLoginDate();
+        Test.stopTest();
+        
+        // Validate result is failure
+        System.assertEquals('Failure', result.get(Label.AEM_Result));
+    }
+}
