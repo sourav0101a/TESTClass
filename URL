@@ -1,0 +1,35 @@
+/***************************************************************************************************
+@Class Name : AEMUpdateLastLogin
+@Description : This class will handle the logic to get cases and their feed items based on user's last login date/time
+@Date           : 08Oct/2017
+@Author         : SS
+@Version        : 1.0
+@Comments       : 
+@Last Modified By       :Satyendra Shrote
+@Last Modified Date     :08Oct/2017
+    @Last Modified Comments   : /services/apexrest/user/AEMUpdateLastLogin/005g0000004ND8a   //userID
+*****************************************************************************************************/
+@RestResource(urlMapping='/user/AEMUpdateLastLogin/*')
+global class AEMUpdateLastLogin {
+    @HttpGet
+    global static   Map<String,String> SetMyLastLoginDate(){  
+        Map<String,String> Result   =   new Map<String,String>();
+        String EmailId              =   '';
+        String Status               =   'Failure';
+        RestRequest req             =   RestContext.request; 
+        List<String>Param           =   req.requestURI.split('/');             
+        EmailId                     =   Param[Param.size()-1]; 
+        List<User>listUserDetails   =   [SELECT Id,name FROM User where id=:EmailId ];
+        MYTR_UserPreferences__c  UserRolePreferences = new   MYTR_UserPreferences__c();
+        UserRolePreferences  =  [SELECT Id,UserPreferencesId__c,Active__c,First_Time_Login_Date__c,First_Time_Login__c,Last_Login_Time__c,productandservices__c,roleresponsibility__c FROM MYTR_UserPreferences__c  where UserPreferencesId__c =:listUserDetails[0].id ];
+        if (UserRolePreferences != null){
+                UserRolePreferences.Last_Login_Time__c = system.today();
+                update UserRolePreferences;
+                Status = 'Success';
+        } 
+        
+        Result.put(Label.AEM_Result, Status); 
+        return Result; 
+    }
+
+}
