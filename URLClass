@@ -1,0 +1,36 @@
+@RestResource(urlMapping='/user/AEMUpdateLastLogin/*')
+global class AEMUpdateLastLogin {
+    @HttpGet
+    global static Map<String, String> SetMyLastLoginDate() {
+        Map<String, String> Result = new Map<String, String>();
+        String EmailId = '';
+        String Status = 'Failure';
+        RestRequest req = RestContext.request;
+        List<String> Param = req.requestURI.split('/');
+        EmailId = Param[Param.size() - 1];
+        
+        // Query for the user record
+        List<User> listUserDetails = [SELECT Id, Name FROM User WHERE Id = :EmailId];
+        
+        // Check if user exists
+        if (!listUserDetails.isEmpty()) {
+            // Query for the user's preferences
+            List<MYTR_UserPreferences__c> UserRolePreferencesList = [
+                SELECT Id, UserPreferencesId__c, Active__c, First_Time_Login_Date__c, First_Time_Login__c, Last_Login_Time__c, productandservices__c, roleresponsibility__c 
+                FROM MYTR_UserPreferences__c 
+                WHERE UserPreferencesId__c = :listUserDetails[0].Id
+            ];
+            
+            // Check if user preferences exist
+            if (!UserRolePreferencesList.isEmpty()) {
+                MYTR_UserPreferences__c UserRolePreferences = UserRolePreferencesList[0];
+                UserRolePreferences.Last_Login_Time__c = System.today();
+                update UserRolePreferences;
+                Status = 'Success';
+            }
+        }
+        
+        Result.put(Label.AEM_Result, Status);
+        return Result;
+    }
+}
