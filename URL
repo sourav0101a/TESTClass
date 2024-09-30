@@ -108,3 +108,13 @@ public class AEMUpdateLastLoginTest {
         System.assertEquals('Failure', result.get(Label.AEM_Result));
     }
 }
+
+
+System.ListException: List index out of bounds: 0
+Class.AEMUpdateLastLogin.SetMyLastLoginDate: line 24, column 1 - This line is following in the class
+UserRolePreferences  =  [SELECT Id,UserPreferencesId__c,Active__c,First_Time_Login_Date__c,First_Time_Login__c,Last_Login_Time__c,productandservices__c,roleresponsibility__c FROM MYTR_UserPreferences__c  where UserPreferencesId__c =:listUserDetails[0].id ];
+
+Class.AEMUpdateLastLoginTest.testSetMyLastLoginDate_Failure: line 66, column 1 - This line is following in test class
+Map<String, String> result = AEMUpdateLastLogin.SetMyLastLoginDate();
+
+
