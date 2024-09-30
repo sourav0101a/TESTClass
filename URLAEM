@@ -1,0 +1,41 @@
+/***************************************************************************************************
+@Class Name : AEMUPSessionIdService  
+@Description : This class will handle the logic for Case FeedItem
+@Date           : 29Aug/2017
+@Author         : SS
+@Version        : 1.0
+@Comments       : Get the Case FeedItem informaiton from the Case and send to AEM
+                : This will return the First 25 Items only.
+@Last Modified By       : Satyendra Shrote 
+@Last Modified Date     : 29Aug/2017
+@Last Mofied Comments   :  
+ 
+/services/apexrest/Case/AEMUPSessionIdService/himanshi.shah@thomsonreuters.com
+*****************************************************************************************************/
+@RestResource(urlMapping='/Case/AEMUPSessionIdService/*')
+global class AEMUPSessionIdService {  
+        // GET API to get user preferences 
+        @HttpGet
+        global static  Map<String, Map<String, String>> GetusersessionID( ){ 
+            RestRequest req = RestContext.request;
+            /*String EmailId  = '';  
+            List<String>Param =  req.requestURI.split('/');             
+            EmailId = Param[Param.size()-1]; */
+            Map<String, Map<String, String> > MapResultOutput = new Map<String, Map<String, String> >();
+            Map<String, String> TempSobjectMap = new Map<String, String>();
+            String Usernames = UserInfo.getUserName(); 
+            /****************** Get user By Username limit 1 *******************/
+            List<User> listUserDetails =  new List<User>();
+            // satyendra Changed for _trp issue fixing the change:
+            listUserDetails = [SELECT Id,AccountId,CompanyName,ContactId,Email,FederationIdentifier,FirstName,Full_Name__c,IsActive,LastName,MobilePhone,Name,Title,Username FROM User where Username=:Usernames AND Profile.Name LIKE 'MYTR%' Limit 1];
+            if(!listUserDetails.IsEmpty()){
+                TempSobjectMap.put('UserID', listUserDetails.get(0).id); 
+            }
+            /****************** Get User Preferences List  *******************/ 
+            TempSobjectMap.put('SessionID', UserInfo.getSessionId()); 
+            
+            MapResultOutput.put(Label.AEM_Result,TempSobjectMap ); 
+            return MapResultOutput;
+        
+        }  
+}
