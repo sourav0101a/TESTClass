@@ -39,3 +39,91 @@ global class AEMUPSessionIdService {
         
         }  
 }
+
+
+
+
+@isTest
+public class AEMUPSessionIdServiceTest {
+
+    @testSetup
+    static void setupTestData() {
+        // Create a User with the profile name starting with 'MYTR'
+        Profile p = [SELECT Id FROM Profile WHERE Name LIKE 'MYTR%' LIMIT 1];
+        
+        User testUser = new User(
+            FirstName = 'Test',
+            LastName = 'User',
+            Username = 'testuser@testorg.com',
+            Email = 'testuser@testorg.com',
+            Alias = 'tuser',
+            TimeZoneSidKey = 'America/Los_Angeles',
+            LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8',
+            ProfileId = p.Id,
+            LanguageLocaleKey = 'en_US'
+        );
+        insert testUser;
+    }
+
+    @isTest
+    static void testGetUserSessionID_Success() {
+        // Set the current user to the test user
+        User testUser = [SELECT Id, Username FROM User WHERE Username = 'testuser@testorg.com' LIMIT 1];
+        System.runAs(testUser) {
+            // Set the mock request (even though it may not be needed in this case)
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/Case/AEMUPSessionIdService/' + testUser.Username;
+            RestContext.request = req;
+
+            // Call the method
+            Test.startTest();
+            Map<String, Map<String, String>> result = AEMUPSessionIdService.GetusersessionID();
+            Test.stopTest();
+            
+            // Validate results
+            System.assert(result.containsKey(Label.AEM_Result), 'The result should contain AEM_Result');
+            Map<String, String> userInfoMap = result.get(Label.AEM_Result);
+            
+            // Validate the User ID and Session ID are returned
+            System.assertEquals(testUser.Id, userInfoMap.get('UserID'), 'User ID should match');
+            System.assertNotEquals(null, userInfoMap.get('SessionID'), 'Session ID should not be null');
+        }
+    }
+
+    @isTest
+    static void testGetUserSessionID_NoMatchingProfile() {
+        // Create a User with a profile name that doesn't match 'MYTR%'
+        Profile p = [SELECT Id FROM Profile WHERE Name != 'MYTR%' LIMIT 1];
+        
+        User nonMYTRUser = new User(
+            FirstName = 'Test',
+            LastName = 'NonMYTRUser',
+            Username = 'nonmytruser@testorg.com',
+            Email = 'nonmytruser@testorg.com',
+            Alias = 'nuser',
+            TimeZoneSidKey = 'America/Los_Angeles',
+            LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8',
+            ProfileId = p.Id,
+            LanguageLocaleKey = 'en_US'
+        );
+        insert nonMYTRUser;
+
+        System.runAs(nonMYTRUser) {
+            // Set the mock request
+            RestRequest req = new RestRequest();
+            req.requestURI = '/services/apexrest/Case/AEMUPSessionIdService/' + nonMYTRUser.Username;
+            RestContext.request = req;
+
+            // Call the method
+            Test.startTest();
+            Map<String, Map<String, String>> result = AEMUPSessionIdService.GetusersessionID();
+            Test.stopTest();
+            
+            // Validate that the result is empty or does not contain a UserID (because no MYTR profile)
+            Map<String, String> userInfoMap = result.get(Label.AEM_Result);
+            System.assertEquals(null, userInfoMap.get('UserID'), 'UserID should not be found for non MYTR profile users');
+        }
+    }
+}
