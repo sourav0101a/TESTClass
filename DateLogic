@@ -1,51 +1,3 @@
-public with sharing class ContractRenewalAPRBatch implements Database.Batchable<Sobject>, Database.Stateful {
-    String status;
-    String Origin;
-    Date dtDate;
-    Boolean inactiveSubsCheck = false;
-    List<String> subsfields = new List<String>(
-        SBQQ__Subscription__c.SObjectType.getDescribe().fields.getMap().keySet()
-    );
-    List<String> afffields = new List<String>(
-        Affiliate_Details__c.SObjectType.getDescribe().fields.getMap().keySet()
-    );
-    List<String> segAllocfields = new List<String>(
-        Segment_Allocation_Detail__c.SObjectType.getDescribe().fields.getMap().keySet()
-    );
-    public ContractRenewalAPRBatch(Date dtDate, String status) {
-        this.dtDate = dtDate;
-        this.status = status;
-        this.Origin = 'Oracle';
-    }
-    public String Query_str =
-        'SELECT ' +
-        'Id, ' +
-        'Status__c,' +
-        'CreatedDate,' +
-        'Actual_Effective_date__c, ' +
-        'Net_Unit_Price__c,  ' +
-        'Proposed_Price__c,' +
-        'Subscription_Id__c, ' +
-        'Subscription_Id__r.SBQQ__Product__c, ' +
-        'Subscription_Id__r.PricebookEntry_Id__c, ' +
-        'Affiliate_Detail__c,' +
-        'Source_Ref_ID__c,' +
-        'Calculated_List_Price__c ' +   
-        'FROM ' +
-        'API_Staging_Table__c ' +
-        'WHERE ' +
-        'Status__c = :status' +
-        ' AND ' +
-        'Origin__c = :Origin' +
-        ' AND ' +
-        'Actual_Effective_date__c = :dtDate';
-    public Database.QueryLocator start(Database.BatchableContext BC) {
-            system.debug('inside start ContractRenewalAPRBatch');
-            system.debug(Query_str);
-            system.debug(dtDate);
-            system.debug(status);
-        return Database.getQueryLocator(Query_str);
-    }
     public void execute(Database.BatchableContext BC, List<API_Staging_Table__c> scope) {
         
         system.debug('Inside execute ContractRenewalAPRBatch');
@@ -397,8 +349,35 @@ public with sharing class ContractRenewalAPRBatch implements Database.Batchable<
             ' from Segment_Allocation_Detail__c   ' +
             ' where Subscription__c IN:SubIdsforSegmentAllocSet';
         List<Segment_Allocation_Detail__c> lstSegAllocforSub = Database.query(String.escapeSingleQuotes(segAllforSubsoql));
-        
-        for(Segment_Allocation_Detail__c segAlloc : lstSegAllocforSub){   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+for(Segment_Allocation_Detail__c segAlloc : lstSegAllocforSub){   
             if(mapSubstoAffiliate.containsKey(segAlloc.Subscription__c)){
                 Map<Id,Decimal> mapSubtoAff = mapSubstoAffiliate.get(segAlloc.Subscription__c);
                 mapSubtoAff.put(segAlloc.id, segAlloc.Allocation_Amount__c);
@@ -966,8 +945,34 @@ public with sharing class ContractRenewalAPRBatch implements Database.Batchable<
                 }
             }
         }
-
-        if (!lstAffls.isEmpty()) {
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		if (!lstAffls.isEmpty()) {
             
                 //system.debug('lstAffls'+lstAffls);  
                 //system.debug('AfftoSegAllocMap'+AfftoSegAllocMap);  
@@ -1337,396 +1342,3 @@ public with sharing class ContractRenewalAPRBatch implements Database.Batchable<
         
         SBQQ.TriggerControl.enable();
     }
-    public void finish(Database.BatchableContext BC) {
-        AsyncApexJob oAsyncApexJob = [
-            SELECT id, NumberOfErrors, ExtendedStatus
-            FROM AsyncApexJob
-            WHERE id = :bc.getJobId()
-        ];
-        string ErrorMessage = oAsyncApexJob.ExtendedStatus;
-        string sEmailMessage;
-        System.Domain d = System.DomainParser.parse(URL.getOrgDomainUrl());
-        String sandboxName = '';
-        if(d.getSandboxName()!=null){ sandboxName = String.valueOf(d.getSandboxName()); }
-        if (inactiveSubsCheck) {
-            sEmailMessage =
-                'Hi,' +
-                '<br/>' +
-                '<br/>' +
-                'Price Increase job failed in SFDC. Please refer API staging record for details';
-        } else {
-            sEmailMessage = 'Hi,' + '<br/>' + '<br/>' + 'Price Increase job failed in SFDC.' + ErrorMessage;
-        }
-        CPQ_Static_Values__c Supportmail = CPQ_Static_Values__c.getValues('Oracle Price Increase Process Email');
-        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
-        String ITSupportEmail = Supportmail.Text_Value__c;
-        String[] sToAddresses = new List<String>{ ITSupportEmail };
-        mail.setToAddresses(sToAddresses);
-        mail.setSenderDisplayName('Salesforce-Oracle Price Increase Process');
-        if(sandboxName!='' && sandboxName!=null ){
-                String subject = sandboxName + ' : SFDC Platform Alert: API Job Failed';
-                mail.setSubject(subject);
-        }else{
-             mail.setSubject('SFDC Platform Alert: API Job Failed');
-        }
-        mail.setPlainTextBody(sEmailMessage);
-        mail.setHtmlBody(sEmailMessage);
-        if (oAsyncApexJob.numberOfErrors > 0 || inactiveSubsCheck) {
-            Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ mail });
-        }
-    }
-    public static API_Staging_Table__c  updateAPIStgTableStatus(ID ApiStagingrecord, String Description, String Type) {
-        API_Staging_Table__c returnapiLog = new API_Staging_Table__c();
-        returnapiLog.Id = ApiStagingrecord;
-        if (!String.isblank(Type) && Type == 'Error') {
-            returnapiLog.Status__c = 'Error';
-        }
-        if (!String.isblank(Type) && Type == 'Success') {
-            returnapiLog.Status__c = 'Completed';
-        }
-        if (!String.isblank(Description)) {
-            returnapiLog.Description__c = Description;
-        }
-        return returnapiLog;
-    }
-
-    public void autoTransferInsertSubsPosFromSubscription(map<String, SBQQ__Subscription__c> mSubs) {
-        List<Subscription_Position__c> targetSubsPosList = new List<Subscription_Position__c>();
-        Subscription_Position__c newPos;
-        List<Subscription_Position__c> oldSubsPosList = new List<Subscription_Position__c>();
-        Subscription_Position__c oldPos;
-
-        if (!mSubs.isEmpty()) {
-            for (Subscription_Position__c pos : [
-                SELECT
-                    User_Entitlement__c,
-                    Machine_Entitlement__c,
-                    Site_Entitlement__c,
-                    Subscription__c,
-                    Contract__c,
-                    Is_Active__c,
-                    Subscription__r.SBQQ__RevisedSubscription__c
-                FROM Subscription_Position__c
-                WHERE
-                    Subscription__c IN :mSubs.keySet()
-                    OR Subscription__r.SBQQ__RevisedSubscription__c IN :mSubs.keySet()
-            ]) {
-                SBQQ__Subscription__c sub = mSubs.get(pos.Subscription__c);
-                if (sub == null)
-                    sub = mSubs.get(pos.Subscription__r.SBQQ__RevisedSubscription__c);
-                if (sub != null) {
-                    Id targetSubscriptionId = sub.Id;
-                    if (pos.Is_Active__c) {
-                        if (targetSubscriptionId != null) {
-                            newPos = new Subscription_Position__c();
-                            newPos.User_Entitlement__c = pos.User_Entitlement__c;
-                            newPos.Machine_Entitlement__c = pos.Machine_Entitlement__c;
-                            newPos.Site_Entitlement__c = pos.Site_Entitlement__c;
-                            newPos.Subscription__c = targetSubscriptionId;
-                            newPos.Contract__c = pos.Contract__c;
-                            targetSubsPosList.add(newPos);
-
-                            oldPos = new Subscription_Position__c();
-                            oldPos.Id = pos.Id;
-                            oldPos.Cancelled_Date__c = dtDate - 1;
-                            oldSubsPosList.add(oldPos);
-                        }
-                    }
-                }
-            }
-
-            if (!targetSubsPosList.isEmpty() || Test.isrunningTest()) {
-                TriggerUtility.objectNames.add('SBQQ__QuoteLine__c');
-                TriggerUtility.objectNames.add('Subscription_Position__c');
-                insert targetSubsPosList;
-                update oldSubsPosList;
-            }
-        }
-    }
-    /**
-     *
-     * @param parentsub
-     * @param sub
-     * @param apiRecord
-     * @param mapPricebookEntry
-     * @param fromCurrency
-     * @param toCurrency
-     * @return  `SBQQ__Subscription__c`
-     */
-    public static SBQQ__Subscription__c recalculateSubscription(
-        SBQQ__Subscription__c parentsub,
-        SBQQ__Subscription__c sub,
-        API_Staging_Table__c apiRecord,
-        Map<String, PricebookEntry> mapPricebookEntry,
-        Map<String, Decimal> fromCurrency,
-        Map<String, Decimal> toCurrency
-    ) {
-        if (apiRecord.Calculated_List_Price__c != null) {
-            sub.Calculated_List_Price__c = apiRecord.Calculated_List_Price__c;
-        }
-        //sub.Billing_Status__c = GlobalVariables.CPQ_SUB_BILLING_STATUS_PENDING_SAP_SYNC;
-        sub.API_Staging_Record__c = apiRecord.Id;
-        sub.Origin__c = 'Annual Price Increase';
-        /*****************Below lines are added for Pricing Calculation*************************/
-        if (
-            parentsub.RGA_Discount__c != null &&
-            parentsub.Native_Price_Before_RGA__c != null &&
-            parentsub.Native_Net_Unit_Price__c != null &&
-            fromCurrency.get(parentsub.Native_Currency_2__c) != null
-        ) {
-            sub.Native_Price_Before_RGA__c = apiRecord.Net_Unit_Price__c;
-            sub.Price_Before_RGA__c =
-                sub.Native_Price_Before_RGA__c *
-                fromCurrency.get(parentsub.Native_Currency_2__c) *
-                toCurrency.get(parentsub.CurrencyIsoCode);
-            sub.Native_Net_Unit_Price__c = sub.Native_Price_Before_RGA__c * (1 - parentsub.RGA_Discount__c / 100);
-            sub.MRR_Unit_Price__c = (sub.Price_Before_RGA__c * (1 - parentsub.RGA_Discount__c / 100)).setScale(2);
-            sub.Uplifted_Price__c = sub.Price_Before_RGA__c;
-            sub.SBQQ__Discount__c = (parentsub.RGA_Discount__c).setScale(2);
-            sub.MRR_Amount_Discount__c = (sub.Price_Before_RGA__c *
-                parentsub.SBQQ__Quantity__c *
-                (sub.SBQQ__Discount__c / 100))
-                .setScale(2);
-        } else if (parentsub.RGA_Discount__c != null) {
-            sub.Uplifted_Price__c = (apiRecord.Net_Unit_Price__c).setScale(2);
-            sub.SBQQ__Discount__c = (parentsub.RGA_Discount__c).setScale(2);
-            sub.MRR_Amount_Discount__c = ((apiRecord.Net_Unit_Price__c) *
-                parentsub.SBQQ__Quantity__c *
-                (sub.SBQQ__Discount__c / 100))
-                .setScale(2);
-            sub.Price_Before_RGA__c = (apiRecord.Net_Unit_Price__c).setScale(2);
-            sub.MRR_Unit_Price__c = (sub.Price_Before_RGA__c * (1 - parentsub.RGA_Discount__c / 100)).setScale(2);
-        } else if (
-            parentsub.Native_Price_Before_RGA__c != null &&
-            parentsub.Native_Net_Unit_Price__c != null &&
-            fromCurrency.get(parentsub.Native_Currency_2__c) != null
-        ) {
-            sub.Native_Price_Before_RGA__c = apiRecord.Net_Unit_Price__c;
-            sub.Price_Before_RGA__c =
-                sub.Native_Price_Before_RGA__c *
-                fromCurrency.get(parentsub.Native_Currency_2__c) *
-                toCurrency.get(parentsub.CurrencyIsoCode);
-            sub.Native_Net_Unit_Price__c = sub.Native_Price_Before_RGA__c;
-            sub.MRR_Unit_Price__c = (sub.Price_Before_RGA__c).setScale(2);
-            sub.Uplifted_Price__c = sub.Price_Before_RGA__c;
-            sub.SBQQ__Discount__c = null;
-            sub.MRR_Amount_Discount__c = null;
-        } else {
-            sub.Price_Before_RGA__c = (apiRecord.Net_Unit_Price__c).setScale(2);
-            sub.MRR_Unit_Price__c = (apiRecord.Net_Unit_Price__c).setScale(2);
-            sub.Uplifted_Price__c = (apiRecord.Net_Unit_Price__c).setScale(2);
-            sub.SBQQ__Discount__c = null;
-            sub.MRR_Amount_Discount__c = null;
-        }
-        if (mapPricebookEntry!=null && parentsub!=null){
-            if (mapPricebookEntry.containsKey(parentsub.PricebookEntry_Id__c) && mapPricebookEntry.get(parentsub.PricebookEntry_Id__c).UnitPrice != parentsub.List_Price__c) {
-                sub.List_Price__c = (mapPricebookEntry.get(parentsub.PricebookEntry_Id__c).UnitPrice).setScale(2);
-                sub.Initial_List_Price__c = (sub.List_Price__c).setScale(2);
-                if(sub!=null && sub.List_Price__c!=null && parentsub.SBQQ__ProrateMultiplier__c!=null){
-                    sub.SBQQ__ListPrice__c = (sub.List_Price__c * parentsub.SBQQ__ProrateMultiplier__c).setScale(2);
-                }
-            }
-        }
-
-        //qccf-204 start refered parentsub values since sub is only picking id
-        if (parentsub.Benchmark_Price__c != null && parentsub.Benchmark_Price__c != 0) {
-            system.debug(
-                'line637 price achievement ' +
-                    parentsub.Price_Achievement__c +
-                    'MRR price ' +
-                    sub.MRR_Unit_Price__c +
-                    'Bench price ' +
-                    parentsub.Benchmark_Price__c
-            );
-            sub.Price_Achievement__c =
-                ((sub.Price_Before_RGA__c).setScale(2) / (parentsub.Benchmark_Price__c).setScale(2)) * 100;
-        } else {
-            sub.Price_Achievement__c = 100;
-        }
-        
-        if(sub.Price_Before_RGA__c!=null){ //OracleAPR
-            sub.SBQQ__NetPrice__c =  (sub.MRR_Unit_Price__c * parentsub.SBQQ__Quantity__c).setScale(2);
-            sub.MRR_Deal_Price__c =  (sub.MRR_Unit_Price__c).setScale(2);
-        }
-        //qccf-204 end
-        /************End of Pricing Logic  *********************/
-        return sub;
-    }
-    
-    
-    public Decimal  recalculateSegAllAmountforSub(Id SubId, Id SegAllocId, Decimal Amount,  Map<Id,Map<Id,Decimal>> mapSubstoAffiliate){
-        
-            Decimal SubAllAmountTotal;
-            if(mapSubstoAffiliate!=null){
-                if(mapSubstoAffiliate.containsKey(SubId)){
-                    Map<Id,Decimal> mapSubtoAff = mapSubstoAffiliate.get(SubId);
-                     SubAllAmountTotal = 0;
-                    for(Id SubAffId: mapSubtoAff.keySet()){
-                        system.debug('SubAffId'+SubAffId);
-                        
-                        if(SubAffId == SegAllocId){
-                            mapSubtoAff.put(SubAffId, Amount);
-                        }
-                        system.debug('mapSubtoAff'+mapSubtoAff);
-                        if(mapSubtoAff.containskey(SubAffId) && mapSubtoAff.get(SubAffId)!=null){
-                            SubAllAmountTotal = SubAllAmountTotal+mapSubtoAff.get(SubAffId);
-                        }                       
-                        system.debug('SubAllAmountTotal'+SubAllAmountTotal);                        
-                        
-                    }
-                }
-            }
-        return SubAllAmountTotal;
-        
-
-    }       
-    
-
-    /**
-     *
-     * @param scRates
-     * @param piRates
-     * @return  `List<SBQQ__SubscriptionConsumptionRate__c>`
-     */
-    private List<SBQQ__SubscriptionConsumptionRate__c> recalculateSubscriptionCSRates(
-        List<SBQQ__SubscriptionConsumptionRate__c> scRates,
-        List<PI_Rate_Staging__c> piRates
-    ) {
-        for (PI_Rate_Staging__c piRate : piRates) {
-            SBQQ__SubscriptionConsumptionRate__c scRate = new SBQQ__SubscriptionConsumptionRate__c();
-            scRate.Id = piRate.Original_subscription_consumption_rate__c;
-            scRate.SBQQ__Price__c = piRate.Calculated_list_price__c;
-            scRates.add(scRate);
-        }
-        return scRates;
-    }
-    /**
-     *
-     * @param scRates
-     * @param subRatesMap
-     * @return  `List<SBQQ__SubscriptionConsumptionRate__c>`
-     */
-    private List<SBQQ__SubscriptionConsumptionRate__c> recalculateExistingSubscriptionCSRates(
-        List<SBQQ__SubscriptionConsumptionRate__c> scRates,
-        Map<String, List<PI_Rate_Staging__c>> subRatesMap
-    ) {
-        List<SBQQ__SubscriptionConsumptionRate__c> existingSCRates = [
-            SELECT
-                Id,
-                SBQQ__SubscriptionConsumptionSchedule__r.SBQQ__Subscription__r.Parent_Subscription__c,
-                SBQQ__LowerBound__c
-            FROM SBQQ__SubscriptionConsumptionRate__c
-            WHERE
-                SBQQ__SubscriptionConsumptionSchedule__r.SBQQ__Subscription__r.Parent_Subscription__c IN :subRatesMap.keySet()
-            ORDER BY SBQQ__LowerBound__c
-        ];
-        Map<String, List<SBQQ__SubscriptionConsumptionRate__c>> subSCRateMap = new Map<String, List<SBQQ__SubscriptionConsumptionRate__c>>();
-        for (SBQQ__SubscriptionConsumptionRate__c scRate : existingSCRates) {
-            if (
-                subSCRateMap.get(
-                    scRate.SBQQ__SubscriptionConsumptionSchedule__r.SBQQ__Subscription__r.Parent_Subscription__c
-                ) == null
-            ) {
-                subSCRateMap.put(
-                    scRate.SBQQ__SubscriptionConsumptionSchedule__r.SBQQ__Subscription__r.Parent_Subscription__c,
-                    new List<SBQQ__SubscriptionConsumptionRate__c>()
-                );
-            }
-            subSCRateMap.get(
-                    scRate.SBQQ__SubscriptionConsumptionSchedule__r.SBQQ__Subscription__r.Parent_Subscription__c
-                )
-                .add(scRate);
-        }
-        for (String subId : subSCRateMap.keySet()) {
-            List<SBQQ__SubscriptionConsumptionRate__c> existingSubRates = subSCRateMap.get(subId);
-            List<PI_Rate_Staging__c> piRates = subRatesMap.get(subId);
-            Map<Decimal, SBQQ__SubscriptionConsumptionRate__c> scRateMap = new Map<Decimal, SBQQ__SubscriptionConsumptionRate__c>();
-            for (SBQQ__SubscriptionConsumptionRate__c scRate : existingSubRates) {
-                scRateMap.put(scRate.SBQQ__LowerBound__c, scRate);
-            }
-            for (PI_Rate_Staging__c piRate : piRates) {
-                SBQQ__SubscriptionConsumptionRate__c scRate = scRateMap.get(piRate.Lower_Bound__c);
-                if (scRate != null) {
-                    scRate.SBQQ__Price__c = piRate.Calculated_list_price__c;
-                    scRates.add(scRate);
-                }
-            }
-        }
-        return scRates;
-    }
-    /**
-     *
-     * @param parentSubs
-     * @return  `List<SBQQ__Subscription__c>`
-     */
-    public List<SBQQ__Subscription__c> getUsageChildSubscriptions(List<String> parentSubs) {
-        String query =
-            'SELECT ' +
-            String.join(subsfields, ',') +
-            ' FROM SBQQ__Subscription__c' +
-            ' where Parent_Subscription__c IN:parentSubs';
-        return Database.query(String.escapeSingleQuotes(query));
-    }
-    /**
-     *
-     * @param clonedUsageSubMap
-     */
-    public void cloneSCRates(Map<String, String> clonedUsageSubMap) {
-        List<SBQQ__SubscriptionConsumptionSchedule__c> sCShedules = [
-            SELECT
-                id,
-                Name,
-                SBQQ__BillingTerm__c,
-                SBQQ__BillingTermUnit__c,
-                SBQQ__Category__c,
-                SBQQ__Description__c,
-                SBQQ__MatchingAttribute__c,
-                SBQQ__RatingMethod__c,
-                SBQQ__Subscription__c,
-                SBQQ__Type__c,
-                SBQQ__UnitOfMeasure__c,
-                SBQQ__ConsumptionSchedule__c
-            FROM SBQQ__SubscriptionConsumptionSchedule__c
-            WHERE SBQQ__Subscription__c IN :clonedUsageSubMap.keySet()
-        ];
-        if(sCShedules.isEmpty()) {
-            return;
-        }
-        List<SBQQ__SubscriptionConsumptionSchedule__c> schedulesToInsert = new List<SBQQ__SubscriptionConsumptionSchedule__c>();
-        for(SBQQ__SubscriptionConsumptionSchedule__c schedule: sCShedules) {
-            SBQQ__SubscriptionConsumptionSchedule__c clonedSchedule = schedule.clone();
-            clonedSchedule.SBQQ__Subscription__c = clonedUsageSubMap.get(clonedSchedule.SBQQ__Subscription__c);
-            schedulesToInsert.add(clonedSchedule);
-        }
-        insert schedulesToInsert;
-        Map<String, String> oldNewScheduleMap = new Map<String, String> ();
-        for(SBQQ__SubscriptionConsumptionSchedule__c schedule: schedulesToInsert) {
-            oldNewScheduleMap.put(schedule.getCloneSourceId(), schedule.id);
-        }
-        List<SBQQ__SubscriptionConsumptionRate__c> sCRatesToInsert = new List<SBQQ__SubscriptionConsumptionRate__c> ();
-        List<SBQQ__SubscriptionConsumptionRate__c> sCRates= [
-            SELECT
-                id,
-                Name,
-                SBQQ__LowerBound__c,
-                SBQQ__Price__c,
-                SBQQ__PricingMethod__c,
-                SBQQ__Description__c,
-                SBQQ__ProcessingOrder__c,
-                SBQQ__UpperBound__c,
-                SBQQ__SubscriptionConsumptionSchedule__c
-            FROM SBQQ__SubscriptionConsumptionRate__c
-            WHERE SBQQ__SubscriptionConsumptionSchedule__c IN :sCShedules
-        ];
-
-        for(SBQQ__SubscriptionConsumptionRate__c rate:sCRates) {
-            SBQQ__SubscriptionConsumptionRate__c clonedRate = rate.clone();
-            clonedRate.SBQQ__SubscriptionConsumptionSchedule__c = oldNewScheduleMap.get(clonedRate.SBQQ__SubscriptionConsumptionSchedule__c);
-            sCRatesToInsert.add(clonedRate);
-        }
-        insert sCRatesToInsert;
-    }
-}
-
-For Auto-Renewable and Manual Renewal Term Types, there should be logic that updates the Current Term Start Date and Current Term End Date 
-I have heard from team members, and have noticed myself, that the dates do not seems to be updating in our live systems.
