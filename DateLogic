@@ -1,12 +1,3 @@
-/*************************************************************************************
-@Technical Lead : 
-@ Developer : 
- *Name :  ContractRenewalAPRBatch
- *Description : This Batch does APR on Renewal subscriptions ( MDQ, NON-MDQ) & also affiliates
- *reference : 
- *Createddate :  May 2024
-**************************************************************************************/
-
 public with sharing class ContractRenewalAPRBatch implements Database.Batchable<Sobject>, Database.Stateful {
     String status;
     String Origin;
@@ -1736,3 +1727,6 @@ public with sharing class ContractRenewalAPRBatch implements Database.Batchable<
         insert sCRatesToInsert;
     }
 }
+
+For Auto-Renewable and Manual Renewal Term Types, there should be logic that updates the Current Term Start Date and Current Term End Date 
+I have heard from team members, and have noticed myself, that the dates do not seems to be updating in our live systems.
