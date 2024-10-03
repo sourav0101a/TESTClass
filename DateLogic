@@ -1,4 +1,5 @@
-    public void execute(Database.BatchableContext BC, List<API_Staging_Table__c> scope) {
+For Auto-Renewable and Manual Renewal Term Types, there should be logic that updates the Current Term Start Date and Current Term End Date (please refer to the attached emails.  I have heard from team members, and have noticed myself, that the dates do not seems to be updating in our live systems.
+public void execute(Database.BatchableContext BC, List<API_Staging_Table__c> scope) {
         
         system.debug('Inside execute ContractRenewalAPRBatch');
         Set<String> setPricebookEntryId = new Set<String>();
