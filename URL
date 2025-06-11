@@ -1,120 +1,155 @@
-/***************************************************************************************************
-@Class Name : AEMUpdateLastLogin
-@Description : This class will handle the logic to get cases and their feed items based on user's last login date/time
-@Date           : 08Oct/2017
-@Author         : SS
-@Version        : 1.0
-@Comments       : 
-@Last Modified By       :Satyendra Shrote
-@Last Modified Date     :08Oct/2017
-    @Last Modified Comments   : /services/apexrest/user/AEMUpdateLastLogin/005g0000004ND8a   //userID
-*****************************************************************************************************/
-@RestResource(urlMapping='/user/AEMUpdateLastLogin/*')
-global class AEMUpdateLastLogin {
-    @HttpGet
-    global static   Map<String,String> SetMyLastLoginDate(){  
-        Map<String,String> Result   =   new Map<String,String>();
-        String EmailId              =   '';
-        String Status               =   'Failure';
-        RestRequest req             =   RestContext.request; 
-        List<String>Param           =   req.requestURI.split('/');             
-        EmailId                     =   Param[Param.size()-1]; 
-        List<User>listUserDetails   =   [SELECT Id,name FROM User where id=:EmailId ];
-        MYTR_UserPreferences__c  UserRolePreferences = new   MYTR_UserPreferences__c();
-        UserRolePreferences  =  [SELECT Id,UserPreferencesId__c,Active__c,First_Time_Login_Date__c,First_Time_Login__c,Last_Login_Time__c,productandservices__c,roleresponsibility__c FROM MYTR_UserPreferences__c  where UserPreferencesId__c =:listUserDetails[0].id ];
-        if (UserRolePreferences != null){
-                UserRolePreferences.Last_Login_Time__c = system.today();
-                update UserRolePreferences;
-                Status = 'Success';
+public class CustomBilltoLookupcontroller {
+
+    public List<tocsubscriber__c> results { get; set; }
+    public List<tocsubscriber__c> paginatedResults { get; set; }
+    public List<account> acclist { get; set; }
+    public Set<Id> accountidset = new Set<Id>();
+    public transient List<tocsubscriber__c> totalresults { get; set; }
+
+    public Integer pageSize { get; set; }
+    public Integer currentPage { get; set; }
+    public Integer totalPages { get; set; }
+
+    public String searchString { get; set; }
+
+    public CustomBilltoLookupcontroller() {
+        pageSize = 900;
+        currentPage = 1;
+
+        acclist = [SELECT Id, ParentId FROM Account WHERE Id = :System.currentPageReference().getParameters().get('accid')];
+        searchString = System.currentPageReference().getParameters().get('lksrch');
+ 		system.debug('acclist' +acclist);
+        if (!acclist.isEmpty()) {
+            Account acc = acclist[0];
+            Integer counter = 0;//TDR-142&217
+			system.debug('@acc  ' + acc);
+            
+            List<Account> listAccounts = [SELECT Id, ParentId FROM Account WHERE ParentId != NULL AND Id IN :acclist]; //Code changes for TDR-404
+            Map<Id, Account> allChildAccounts = new Map<Id, Account>(listAccounts);
+
+            Account ACC3 = new Account();
+            if (acc.ParentId != null) {
+                ACC3 = [SELECT Id, ParentId FROM Account WHERE Id = :acc.ParentId];
+                system.debug('@acc3 ' + ACC3);
+            }
+
+            while (acc.ParentId != null && counter < 3) 
+            {
+                system.debug('@acc.parentid in while:  ' + acc.parentid );
+            
+                Account acc2 = allChildAccounts.get(acc.ParentId);
+            	system.debug('@acc2:' + acc2); 
+            
+                if (acc2 == null && counter == 0) {
+                    acclist.add(ACC3);
+                    break;
+                } else {
+                    acclist.add(acc2);
+                    acc = acc2;
+                }
+            }
+
+            for (Account accparent : acclist) {
+                accountidset.add(accparent.Id);
+            }
+
+         /* for (Account accchild : [
+                SELECT Id FROM Account 
+                WHERE ParentId != null AND (
+                    ParentId IN :accountidset OR 
+                    Parent.ParentId IN :accountidset OR 
+                    Parent.Parent.ParentId IN :accountidset
+                )
+            ]) {
+                accountidset.add(accchild.Id);
+            }
+        
+        totalresults = new List<tocsubscriber__c>();
+        if (!accountidset.isEmpty()) {
+            totalresults = [
+                SELECT Id, Billing_Address__c, Account_Number__c, Name, Name__c 
+                FROM tocsubscriber__c 
+                WHERE Account__c IN :accountidset AND Account_Number__c != null
+            ];
+		*/
         } 
-        
-        Result.put(Label.AEM_Result, Status); 
-        return Result; 
+
+        search();
     }
 
+    public PageReference Search() {
+        system.debug('Inside Search()');
+        /*results = new List<tocsubscriber__c>();
+
+        if (searchString != null && searchString != '' && !totalresults.isEmpty()) {
+            for (tocsubscriber__c oSubscriber : totalresults) {
+                if (
+                    (oSubscriber.Billing_Address__c != null && oSubscriber.Billing_Address__c.containsIgnoreCase(searchString)) ||
+                    (oSubscriber.Account_Number__c != null && oSubscriber.Account_Number__c.equalsIgnoreCase(searchString)) ||
+                    (oSubscriber.Name != null && oSubscriber.Name.equalsIgnoreCase(searchString)) ||
+                    (oSubscriber.Name__c != null && oSubscriber.Name__c.containsIgnoreCase(searchString))
+                ) {
+                    results.add(oSubscriber);
+                }
+            }
+        } else {
+            results.addAll(totalresults);
+        }
+		system.debug('Results :' + results); */
+        updatePagination();
+        return null;
+    }
+
+    public void updatePagination() {
+        paginatedResults = new List<tocsubscriber__c>();
+        if (accountidset.isEmpty()) return;
+
+        Integer offsetVal = (currentPage - 1) * pageSize;
+        String escapedSearch = String.escapeSingleQuotes(searchString);
+        String searchPattern = '%' + escapedSearch + '%';
+
+        String baseQuery = 'SELECT Id, Billing_Address__c, Account_Number__c, Name, Name__c ' +
+            		   		'FROM tocsubscriber__c WHERE Account__c IN (SELECT Id FROM Account ' +
+                            'WHERE Id IN :accountidset OR ParentId IN :accountidset OR Parent.ParentId IN :accountidset) ' +
+                            'AND Account_Number__c != null';
+		System.debug('updatePagination baseQuery Value' +baseQuery);
+        if (String.isNotBlank(searchString)) {
+            baseQuery += ' AND (Billing_Address__c LIKE \'' + searchPattern + '\' ' +
+                     'OR Account_Number__c = \'' + escapedSearch + '\' ' +
+                     'OR Name = \'' + escapedSearch + '\' ' +
+                     'OR Name__c LIKE \'' + searchPattern + '\')';
+        }
+
+        baseQuery += ' LIMIT ' + pageSize + ' OFFSET ' + offsetVal;
+		
+        System.debug('updatePagination baseQuery Value updated' +baseQuery);
+        paginatedResults = Database.query(baseQuery);
+		
+        System.debug('updatePagination paginatedResults Value' +paginatedResults);
+        
+    }
+
+    public void nextPage() {
+        system.debug('nextPage');
+        if (currentPage < totalPages) {
+            currentPage++;
+            updatePagination();
+        }
+    }
+
+    public void previousPage() {
+        system.debug('previousPage');
+        if (currentPage > 1) {
+            currentPage--;
+            updatePagination();
+        }
+    }
+
+    public String getFormTag() {
+        return System.currentPageReference().getParameters().get('frm');
+    }
+
+    public String getTextBox() {
+        return System.currentPageReference().getParameters().get('txt');
+    }
 }
-
-
-
-@isTest
-public class AEMUpdateLastLoginTest {
-
-    @testSetup
-    static void setupTestData() {
-        // Create a User
-        User testUser = new User(
-            FirstName = 'Test',
-            LastName = 'User',
-            Username = 'testuser@testorg.com',
-            Email = 'testuser@testorg.com',
-            Alias = 'tuser',
-            TimeZoneSidKey = 'America/Los_Angeles',
-            LocaleSidKey = 'en_US',
-            EmailEncodingKey = 'UTF-8',
-            ProfileId = [SELECT Id FROM Profile WHERE Name = 'Standard User'][0].Id,
-            LanguageLocaleKey = 'en_US'
-        );
-        insert testUser;
-        
-        // Create a MYTR_UserPreferences__c record
-        MYTR_UserPreferences__c userPreferences = new MYTR_UserPreferences__c(
-            UserPreferencesId__c = testUser.Id,
-            Active__c = true,
-            First_Time_Login_Date__c = Date.today(),
-            First_Time_Login__c = true,
-            Last_Login_Time__c = Date.today().addDays(-10),
-            productandservices__c = 'Test Product',
-            roleresponsibility__c = 'Test Role'
-        );
-        insert userPreferences;
-    }
-    
-    @isTest
-    static void testSetMyLastLoginDate_Success() {
-        // Retrieve test user
-        User testUser = [SELECT Id FROM User WHERE Username = 'testuser@testorg.com' LIMIT 1];
-        
-        // Set mock request URL
-        RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/user/AEMUpdateLastLogin/' + testUser.Id;
-        RestContext.request = req;
-        
-        // Call the method
-        Test.startTest();
-        Map<String, String> result = AEMUpdateLastLogin.SetMyLastLoginDate();
-        Test.stopTest();
-        
-        // Validate result
-        System.assertEquals('Success', result.get(Label.AEM_Result));
-        
-        // Validate that the Last_Login_Time__c was updated
-        MYTR_UserPreferences__c userPref = [SELECT Last_Login_Time__c FROM MYTR_UserPreferences__c WHERE UserPreferencesId__c = :testUser.Id];
-        System.assertEquals(Date.today(), userPref.Last_Login_Time__c);
-    }
-
-    @isTest
-    static void testSetMyLastLoginDate_Failure() {
-        // Set mock request URL with an invalid user ID
-        RestRequest req = new RestRequest();
-        req.requestURI = '/services/apexrest/user/AEMUpdateLastLogin/invalidUserId';
-        RestContext.request = req;
-        
-        // Call the method
-        Test.startTest();
-        Map<String, String> result = AEMUpdateLastLogin.SetMyLastLoginDate();
-        Test.stopTest();
-        
-        // Validate result is failure
-        System.assertEquals('Failure', result.get(Label.AEM_Result));
-    }
-}
-
-
-System.ListException: List index out of bounds: 0
-Class.AEMUpdateLastLogin.SetMyLastLoginDate: line 24, column 1 - This line is following in the class
-UserRolePreferences  =  [SELECT Id,UserPreferencesId__c,Active__c,First_Time_Login_Date__c,First_Time_Login__c,Last_Login_Time__c,productandservices__c,roleresponsibility__c FROM MYTR_UserPreferences__c  where UserPreferencesId__c =:listUserDetails[0].id ];
-
-Class.AEMUpdateLastLoginTest.testSetMyLastLoginDate_Failure: line 66, column 1 - This line is following in test class
-Map<String, String> result = AEMUpdateLastLogin.SetMyLastLoginDate();
-
-
