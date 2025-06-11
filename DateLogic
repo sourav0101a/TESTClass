@@ -1,261 +1,117 @@
 @isTest(SeeAllData = false)
-public class CustomBilltoLookupcontrollerTest{
-    
-    @TestSetup
-    static void makeData() 
-    {
-        //Creating Integration Setting
-        Integration_Setting__c integrationSetting= new Integration_Setting__c();
-        integrationSetting.name= 'AccountConnect';
-        integrationSetting.API_Key__c= 'x-api-key';
-        integrationSetting.Endpoint_Server__c ='https://qa.rasi.refinitiv.com';
-        integrationSetting.Endpoint_URI__c='api/v1/accounts/account-request';
-        integrationSetting.HTTP_Headers__c='Content-Type=>application/json';
-        integrationSetting.HTTP_Method__c ='POST';
-        integrationSetting.Timeout__c=120000;
-        integrationSetting.Enable_Logging__c=true;
-        insert integrationSetting;
-        
-        //Creating record in "CountryRegionMapping__c" Custom Setting
-        List<CountryRegionMapping__c> countryRegionMappingList=new List<CountryRegionMapping__c>();
-        
-        CountryRegionMapping__c countryRegionVal=new CountryRegionMapping__c();
-        countryRegionVal.Name='United States';
-        countryRegionVal.Region__c='Americas';
-        
-        countryRegionMappingList.add(countryRegionVal);
-        
-        CountryRegionMapping__c countryRegionVal1=new CountryRegionMapping__c();
-        countryRegionVal1.Name='United Kingdom';
-        countryRegionVal1.Region__c='EMEA';
-        
-        countryRegionMappingList.add(countryRegionVal1);
-        
-        CountryRegionMapping__c countryRegionVal2=new CountryRegionMapping__c();
-        countryRegionVal2.Name='Germany';
-        countryRegionVal2.Region__c='EMEA';
-        
-        countryRegionMappingList.add(countryRegionVal2);
-        
-        CountryRegionMapping__c countryRegionVal3=new CountryRegionMapping__c();
-        countryRegionVal3.Name='India';
-        countryRegionVal3.Region__c='Asia';
-        
-        countryRegionMappingList.add(countryRegionVal3);
-        
-        //Creating record in "Static_Values__c" Custom Setting
-        Static_Values__c statval=new Static_Values__c();
-        statval.Name='CTI_Scheduler_IsRunning';
-        statval.Value__c='false';
-        insert statval;
-        
-        //Creating record in "Static_Values__c" Custom Setting
-        Static_Values__c setting= new Static_Values__c();
-        setting.Name = 'Trigger to AAA from AccCon Jun Roles';
-        setting.Value__c = 'test';
-        insert setting;
-        
-        /*Creating record in "CountryWithMandatoryState__c" Custom Setting.This custom setting contains country names for which state
-is mandatory on Billing Account*/
-        
-        List<CountryWithMandatoryState__c> countryWithStateMandatoryList=new List<CountryWithMandatoryState__c>();
-        
-        CountryWithMandatoryState__c country1=new CountryWithMandatoryState__c();
-        country1.Name='Australia';
-        
-        countryWithStateMandatoryList.add(country1);
-        
-        CountryWithMandatoryState__c country2=new CountryWithMandatoryState__c();
-        country2.Name='Brazil';
-        
-        countryWithStateMandatoryList.add(country2);
-        
-        CountryWithMandatoryState__c country3=new CountryWithMandatoryState__c();
-        country3.Name='Canada';
-        
-        countryWithStateMandatoryList.add(country3);
-        
-        CountryWithMandatoryState__c country4=new CountryWithMandatoryState__c();
-        country4.Name='China';
-        
-        countryWithStateMandatoryList.add(country4);
-        
-        CountryWithMandatoryState__c country5=new CountryWithMandatoryState__c();
-        country5.Name='India';
-        
-        countryWithStateMandatoryList.add(country5);
-        
-        CountryWithMandatoryState__c country6=new CountryWithMandatoryState__c();
-        country6.Name='Ireland';
-        
-        countryWithStateMandatoryList.add(country6);
-        
-        CountryWithMandatoryState__c country7=new CountryWithMandatoryState__c();
-        country7.Name='Italy';
-        
-        countryWithStateMandatoryList.add(country7);
-        
-        CountryWithMandatoryState__c country8=new CountryWithMandatoryState__c();
-        country8.Name='Mexico';
-        
-        countryWithStateMandatoryList.add(country8);
-        
-        CountryWithMandatoryState__c country9=new CountryWithMandatoryState__c();
-        country9.Name='United States';
-        
-        countryWithStateMandatoryList.add(country9);
-        
-        insert countryWithStateMandatoryList;
-        
-        //Assigning state values of different countries of Billing Accounts to the below variables
-        String stateValueForIndia='Karnataka,Tripura,Goa,Kerala,Manipur,Daman and Diu,Uttar Pradesh';
-        String stateValueforUS='New York,Kentucky';
-        String stateValueforUK='Hertfordshire';
-        String stateValueForFD='Bremen,Schleswig Holstein,Sachsen,Berlin,Hessen,Brandenburg,Baden Wurttemberg,Bayern';
-        
-        //Creating records in "CurrencyMapping" object.The records are essential to generate Subscriber Numbers for Billing Accounts
-        
-        List<tocCurrencyMapping__c> currencyMappingList=new List<tocCurrencyMapping__c>();
-        
-        tocCurrencyMapping__c inData= new tocCurrencyMapping__c(tocCountry__c='India',tocCurrency__c='INR',CS_Integration_Flag__c=true,
-                                                                Publish_Account_To_SAP__c=true,Country_Code__c='IN',State__c=stateValueForIndia);
-        currencyMappingList.add(inData);
-        
-        tocCurrencyMapping__c inData1= new tocCurrencyMapping__c(tocCountry__c='United States',tocCurrency__c='USD',CS_Integration_Flag__c=true,
-                                                                 Publish_Account_To_SAP__c=true,Country_Code__c='US',State__c=stateValueforUS);
-        currencyMappingList.add(inData1);
-        
-        tocCurrencyMapping__c inData2= new tocCurrencyMapping__c(tocCountry__c='United Kingdom',tocCurrency__c='GBP',CS_Integration_Flag__c=true,
-                                                                 Publish_Account_To_SAP__c=true,Country_Code__c='UK',State__c=stateValueforUK);
-        currencyMappingList.add(inData2);
-        
-        tocCurrencyMapping__c inData3= new tocCurrencyMapping__c(tocCountry__c='Germany',tocCurrency__c='EUR',CS_Integration_Flag__c=true,
-                                                                 Publish_Account_To_SAP__c=true,Country_Code__c='FD',State__c=stateValueForFD);
-        currencyMappingList.add(inData3);
-        
-        insert currencyMappingList;
-        
-        //Creating record in "BillPayerViewer__c" Custom Setting
-        BillPayerViewer__c bpayer = new BillPayerViewer__c();
-        bpayer.Values__c ='Billing Contact - Payer';
-        bpayer.Name ='Billing Contact - Payer';
-        insert bpayer;
-    }
-    public static testmethod void  testcontroller(){
-        
-        Test.startTest();
-        
-        account acc1 = new account();
-        acc1.name='testwave2account';acc1.tfcmCustomerStatus__c='Active';acc1.Segment__c='Central Bank';acc1.Credit_Check_Status__c ='Not Started';
-        acc1.TDO_Status__c = 'Not Started';acc1.Legal_Entity__c = true;acc1.ShippingCity='New York';acc1.ShippingStreet='123';acc1.ShippingPostalCode='456';acc1.ShippingCountry='United States';acc1.AccountNumber='A-1234571';        
-        insert acc1;
-        system.debug('child1 '+acc1);
-        account acc2 = new account();
-        acc2.name='testwave2account';acc2.tfcmCustomerStatus__c='Active';acc2.Segment__c='Central Bank';acc2.Credit_Check_Status__c ='Not Started';
-        acc2.TDO_Status__c = 'Not Started';acc2.Legal_Entity__c = true;acc2.ShippingCity='New York';acc2.ShippingStreet='123';acc2.ShippingPostalCode='456';acc2.ShippingCountry='United States';acc2.AccountNumber='A-1234572';        
-        acc2.parentid=acc1.id;
-        insert acc2;
-        system.debug('child2 '+acc2);
+public class CustomBilltoLookupcontrollerTest {
 
-        /*tocSubscriber__c billadd = new tocSubscriber__c(name='test',account__c = acc2.id,StreetAddress__c ='test',Account_Number__c='testa-12345',name__c='test');*/
-        
-        Id r2 = Schema.SObjectType.Contact.getRecordTypeInfosByName().get('TSales Contact').getRecordTypeId();  
-        
-        Contact contact = new Contact();
-        contact.RecordTypeId = r2;
-        contact.LastName = 'UnitTest Contact';
-        contact.tocContactStatus__c = 'Current User';
-        contact.Email = 'abc@tr.com';
-        contact.Salutation = 'Mr';
-        contact.FirstName = 'Name';
-        contact.AccountId = acc2.id;
-        insert contact;
-        
-        tocSubscriber__c billadd = new tocSubscriber__c();
-        billadd.Name__c= '1';
-        billadd.StreetAddress__c = '195 Broadway';
-        billadd.City__c = 'New York';
-        billadd.State_Province__c = 'New York';
-        billadd.Postal_Code__c = '10021';
-        billadd.Country__c = 'United States';
-        billadd.Billing_Type__c = 'Billing';
-        billadd.Name='bill1';
-        billadd.Account_Status__c='Active';
-        billadd.Account__c =acc2.id;
-        billadd.Account_Number__c = 'A-12345'; 
-        
-        billadd.Sub_Account_Number__c='150';
-        billadd.Billing_Type__c='Billing';
-        billadd.Bill_Contact_Payer__c=contact.Id;
-        insert billadd;
-        
-        PageReference pageRef = Page.CustomBilltoLookup;
-        Test.setCurrentPage(pageRef);
-        ApexPages.currentPage().getParameters().put('accid',acc2.id);
-        CustomBilltoLookupcontroller cblc =new CustomBilltoLookupcontroller();
-        
-        Test.stopTest();
-        System.assertEquals(contact.LastName, 'UnitTest Contact');
-    }
-    public static testmethod void  testcontroller2(){
-        
-        Test.startTest();
-        
-        account acc1 = new account();
-        acc1.name='testacc1';acc1.tfcmCustomerStatus__c='Active';acc1.Segment__c='Central Bank';acc1.Credit_Check_Status__c ='Not Started';
-        acc1.TDO_Status__c = 'Not Started';acc1.Legal_Entity__c = true;acc1.ShippingCity='New York';acc1.ShippingStreet='123';acc1.ShippingPostalCode='456';acc1.ShippingCountry='United States';acc1.AccountNumber='A-123457';        
+    @TestSetup
+    static void setupData() {
+        // Accounts with Parent-Child
+        Account acc1 = new Account(
+            Name='testwave2account',
+            tfcmCustomerStatus__c='Active',
+            Segment__c='Central Bank',
+            Credit_Check_Status__c='Not Started',
+            TDO_Status__c='Not Started',
+            Legal_Entity__c=true,
+            ShippingCity='New York',
+            ShippingStreet='123',
+            ShippingPostalCode='456',
+            ShippingCountry='United States',
+            AccountNumber='A-1234571'
+        );
         insert acc1;
-        account acc2 = new account();
-        acc2.name='testacc2';acc2.tfcmCustomerStatus__c='Active';acc2.Segment__c='Central Bank';acc2.Credit_Check_Status__c ='Not Started';
-        acc2.TDO_Status__c = 'Not Started';acc2.Legal_Entity__c = true;acc2.ShippingCity='New York';acc2.ShippingStreet='123';acc2.ShippingPostalCode='456';acc2.ShippingCountry='United States';acc2.AccountNumber='A-123457';        
-        acc2.parentid=acc1.id;
+
+        Account acc2 = new Account(
+            Name='testwave2account',
+            tfcmCustomerStatus__c='Active',
+            Segment__c='Central Bank',
+            Credit_Check_Status__c='Not Started',
+            TDO_Status__c='Not Started',
+            Legal_Entity__c=true,
+            ShippingCity='New York',
+            ShippingStreet='123',
+            ShippingPostalCode='456',
+            ShippingCountry='United States',
+            AccountNumber='A-1234572',
+            ParentId=acc1.Id
+        );
         insert acc2;
-        
-        Id r2 = Schema.SObjectType.Contact.getRecordTypeInfosByName().get('TSales Contact').getRecordTypeId();  
-        
-        Contact contact = new Contact();
-        contact.RecordTypeId = r2;
-        contact.LastName = 'UnitTest Contact';
-        contact.tocContactStatus__c = 'Current User';
-        contact.Email = 'abc@tr.com';
-        contact.Salutation = 'Mr';
-        contact.FirstName = 'Name';
-        contact.AccountId = acc2.id;
+
+        // Contact
+        Id contactRTId = Schema.SObjectType.Contact.getRecordTypeInfosByName().get('TSales Contact').getRecordTypeId();
+        Contact contact = new Contact(
+            RecordTypeId = contactRTId,
+            LastName='UnitTest Contact',
+            tocContactStatus__c='Current User',
+            Email='abc@tr.com',
+            Salutation='Mr',
+            FirstName='Name',
+            AccountId=acc2.Id
+        );
         insert contact;
-        
-        tocSubscriber__c billadd = new tocSubscriber__c();
-        billadd.Name__c= '1';
-        billadd.StreetAddress__c = '195 Broadway';
-        billadd.City__c = 'New York';
-        billadd.State_Province__c = 'New York';
-        billadd.Postal_Code__c = '10021';
-        billadd.Country__c = 'United States';
-        billadd.Billing_Type__c = 'Billing';
-        billadd.Name='bill1';
-        billadd.Account_Status__c='Active';
-        billadd.Account__c =acc2.id;
-        billadd.Account_Number__c = 'A-12345'; 
-        
-        billadd.Sub_Account_Number__c='150';
-        billadd.Billing_Type__c='Billing';
-        billadd.Bill_Contact_Payer__c=contact.Id;
-        insert billadd;
-        
+
+        // tocSubscriber
+        tocSubscriber__c subscriber = new tocSubscriber__c(
+            Name__c='1',
+            StreetAddress__c='195 Broadway',
+            City__c='New York',
+            State_Province__c='New York',
+            Postal_Code__c='10021',
+            Country__c='United States',
+            Billing_Type__c='Billing',
+            Name='bill1',
+            Account_Status__c='Active',
+            Account__c=acc2.Id,
+            Account_Number__c='A-12345',
+            Sub_Account_Number__c='150',
+            Bill_Contact_Payer__c=contact.Id
+        );
+        insert subscriber;
+    }
+
+    @isTest
+    static void test_Controller_FullFlow() {
+        Account acc2 = [SELECT Id, ParentId FROM Account WHERE ParentId != null LIMIT 1];
+
+        Test.startTest();
         PageReference pageRef = Page.CustomBilltoLookup;
         Test.setCurrentPage(pageRef);
-        ApexPages.currentPage().getParameters().put('accid',acc2.parentid);
-        CustomBilltoLookupcontroller cblc =new CustomBilltoLookupcontroller();
-        cblc.totalresults =new list<tocsubscriber__c>();
-        tocsubscriber__c billadd2 = [select id,Billing_Address__c,Account_Number__c,Name,name__c from tocsubscriber__c 
-                                     where id=:billadd.id];
-        cblc.totalresults.add(billadd2);
-        cblc.searchstring='testa-12345';
-        cblc.search();
-        cblc.getTextBox();
-        cblc.getFormTag();
-        
+        ApexPages.currentPage().getParameters().put('accid', acc2.Id);
+        ApexPages.currentPage().getParameters().put('lksrch', 'A-12345');
+
+        CustomBilltoLookupcontroller controller = new CustomBilltoLookupcontroller();
+
+        controller.search();
+        controller.updatePagination();
+        controller.nextPage();
+        controller.previousPage();
+
+        // Set search string and retest
+        controller.searchString = 'A-12345';
+        controller.updatePagination();
+
+        // Getters
+        ApexPages.currentPage().getParameters().put('frm', 'formValue');
+        ApexPages.currentPage().getParameters().put('txt', 'textValue');
+        String formVal = controller.getFormTag();
+        String txtVal = controller.getTextBox();
+
+        System.assertEquals('formValue', formVal);
+        System.assertEquals('textValue', txtVal);
+        System.assertNotEquals(null, controller.paginatedResults);
+
         Test.stopTest();
-        System.assertEquals(contact.LastName, 'UnitTest Contact');
-        
+    }
+
+    @isTest
+    static void test_Controller_NoAccId() {
+        Test.startTest();
+        PageReference pageRef = Page.CustomBilltoLookup;
+        Test.setCurrentPage(pageRef);
+
+        CustomBilltoLookupcontroller controller = new CustomBilltoLookupcontroller();
+        controller.search();
+        controller.updatePagination();
+        controller.nextPage();
+        controller.previousPage();
+        Test.stopTest();
     }
 }
